@@ -4,12 +4,12 @@
 
 ## 0. Bootstrap e Branch
 
-- [ ] 0.1 **[AUTORIZAÇÃO] Commit inicial e `develop`** (repo vazio, sem `develop`)
+- [x] 0.1 **[AUTORIZAÇÃO] Commit inicial e `develop`** (repo vazio, sem `develop`)
   - **Comando:** `git add openspec .claude && git commit -m "chore: bootstrap openspec" && git push -u origin main && git branch develop && git push -u origin develop`
   - **Contexto:** design.md Decisão 20 — a regra de worktree parte de `develop`.
   - **Done:** `git branch -a` mostra `main`, `develop` e os remotos.
 
-- [ ] 0.2 **Criar worktree `feature/ngnative-app-skeleton`** (skill `openspec-worktree`)
+- [x] 0.2 **Criar worktree `feature/ngnative-app-skeleton`** (skill `openspec-worktree`)
   - **Comando:** `git worktree add worktrees/skeleton -b feature/ngnative-app-skeleton develop` (path curto: aapt2/OneDrive)
   - **Done:** `git worktree list` mostra `worktrees/skeleton` na branch `feature/ngnative-app-skeleton`. Todas as tasks seguintes rodam nesse worktree.
 
@@ -19,37 +19,37 @@
 
 > Código dos spikes é descartável; só as decisões vão para o design.md.
 
-- [ ] 1.1 **Spike (a): template NG Native e APK no Docker**
+- [x] 1.1 **Spike (a): template NG Native e APK no Docker**
   - **O que fazer:** `create-expo-app --template @ng-native/template` num serviço `node` do compose; `Dockerfile.build` provisório (Node 22.18+, JDK 17, Android cmdline-tools); `expo prebuild --platform android` e `gradlew assembleRelease`.
   - **Contexto:** design.md Decisões 2, 18 e 19.
   - **Done:** APK gerado; registrar versões reais de Angular, `@ng-native/*`, Expo, RN, Node, JDK, `compileSdk` e `build-tools`. **Se falhar, parar.**
 
-- [ ] 1.2 **Spike (b): tabs, ícone ⚙ e modal como sheet**
+- [x] 1.2 **Spike (b): tabs, ícone ⚙ e modal como sheet**
   - **O que fazer:** `native-tabs-outlet` com 4 rotas + botão ⚙ que não navega; `<modal>` com animação como sheet; `HardwareBack` fechando o sheet.
   - **Contexto:** design.md Decisões 4 e 11.
   - **Done:** funciona no emulador/dispositivo; decisão registrada (sheet com ou sem gesto). **Se falhar, parar.**
 
-- [ ] 1.3 **Spike (c): NgRx e HttpClient nativo**
+- [x] 1.3 **Spike (c): NgRx e HttpClient nativo**
   - **O que fazer:** `provideStore`/`provideEffects` + `selectSignal` no app nativo; `provideNativeHttpClient()` com um interceptor.
   - **Contexto:** design.md Decisões 5 e 12.
   - **Done:** Store e interceptor funcionam no Android; decidir NgRx Store, SignalStore ou store próprio.
 
-- [ ] 1.4 **Spike (d): Database, migrations e reatividade**
+- [x] 1.4 **Spike (d): Database, migrations e reatividade**
   - **O que fazer:** módulo `Database` com 2 migrations; repositório com signal de listagem e invalidação; testar `addDatabaseChangeListener`.
   - **Contexto:** design.md Decisão 6.
   - **Done:** inserção externa atualiza a lista sem recarga; decisão registrada.
 
-- [ ] 1.5 **Spike (e): shell web, islands, service worker e IndexedDB**
+- [x] 1.5 **Spike (e): shell web, islands, service worker e IndexedDB**
   - **O que fazer:** `apps/web` Angular + `ngNativeWeb()`, uma island com um componente nativo, `@angular/service-worker`, IndexedDB.
   - **Contexto:** design.md Decisões 7 e 8.
   - **Done:** island renderiza no Chromium, SW ativo, abertura offline funciona.
 
-- [ ] 1.6 **Spike (f): emulador + Maestro com KVM**
+- [x] 1.6 **Spike (f): emulador + Maestro com KVM**
   - **O que fazer:** emulador x86_64 headless num container (WSL2 com `/dev/kvm`), instalar o APK do spike (a) e rodar um fluxo Maestro.
   - **Contexto:** design.md Decisão 18.
   - **Done:** Maestro abre o app e tira screenshot; sem KVM, registrar o plano B (runner Linux).
 
-- [ ] 1.7 **Commit + push do grupo 1** (descartar o código dos spikes; manter só as decisões em design.md)
+- [x] 1.7 **Commit + push do grupo 1** (descartar o código dos spikes; manter só as decisões em design.md)
   - **Comando:** `git add openspec && git commit -m "docs: registra decisoes dos spikes" && git push -u origin feature/ngnative-app-skeleton`
   - **Done:** `git log --oneline -1` mostra o commit.
 

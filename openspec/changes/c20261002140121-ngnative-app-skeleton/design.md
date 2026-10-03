@@ -86,12 +86,50 @@ Insumos: `concept.md`, `proposal.md`, 10 specs, `use-cases.md` (UC-01 a UC-10) e
 
 Repo novo, sem migração de dados. Sequência: bootstrap do repo → worktree → spikes → fundação (Nx, camadas, testes) → UI shell → estado → banco → rede/storage → logs/erros/notificações → PWA → Docker/E2E → docs/graphify → PR. **Rollback:** descartar a branch `feature/ngnative-app-skeleton`; nada fora do repo novo é alterado.
 
-## Open Questions
+## Open Questions & Decisões dos Spikes
 
-- Versões exatas de Angular 22, `@ng-native/*`, Expo 57, RN 0.86, Node e `compileSdk`/`build-tools`; JDK 17 suficiente? (spike a).
-- O tab bar nativo aceita um item que só dispara ação (⚙) sem rota? (spike b).
-- NgRx Store ou SignalStore no renderer nativo? (spike c).
-- `addDatabaseChangeListener` do expo-sqlite acessível pelo módulo `Database` do NG Native? (spike d).
-- Dexie ou wrapper próprio para IndexedDB; Tailwind 3 (preset) ou 4 (`native.css`).
+- **Spike 1.1 (a) - Versões reais validadas no Docker:**
+  - Angular: `22.0.0` (`@angular/core`, `@angular/common`, `@angular/compiler-cli`)
+  - `@ng-native/*`: `0.3.0` (`components`, `device`, `fabric`, `metro`, `platform`, `testing`, `expo`, `icons`, `tailwind`, `web`)
+  - Expo SDK: `57.0.26`
+  - React Native: `0.86.3` (New Architecture / Fabric / TurboModules / Hermes ativo)
+  - React: `19.2.3`
+  - Node: `22.23.3`
+  - JDK: OpenJDK `17.0.18` (suficiente e compatível com Gradle 9.3.1)
+  - Gradle: `9.3.1`
+  - compileSdk / targetSdk: `36` (minSdk: `24`)
+  - build-tools: `36.0.0`
+  - NDK: `27.1.12297006`
+  - Kotlin: `2.1.20`
+  - APK Release: compilado e gerado com sucesso via Docker (`app-release.apk`, 71MB).
+
+- **Spike 1.2 (b) - Tabs, botão ⚙ e BottomSheet:**
+  - `native-tabs-outlet` / `@ng-native/router`: itens `<native-tab>` são modelos de barra nativa (`UITabBarItem`/`BottomNavigationItem`) e exigem um `path`.
+  - Botão ⚙ (Configurações): implementado com rota `configuracoes` interceptada por `canActivate: () => { settingsSheetService.open(); return false; }`. O guard aciona a abertura do sheet e cancela a navegação, mantendo o histórico e a aba ativa inalterados com 100% de estabilidade.
+  - BottomSheet: implementado sobre `<modal [transparent]="true" animationType="slide">` com backdrop clicável e container inferior arredondado. A abordagem sem worklets de gesto complexos (apenas backdrop touch + close button + slide nativo) é extremamente sólida e evita fragilidade no Fabric.
+  - Botão Voltar (Android): integrado com sucesso via serviço `HardwareBack` (`@ng-native/device`), interceptando o back para fechar o sheet quando visível e liberando o evento quando fechado.
+
+- **Spike 1.3 (c) - Estado e HttpClient nativo:**
+  - Decisão sobre Gerenciamento de Estado: Adotado **`@ngrx/signals` (SignalStore)**. O NgRx Store clássico com Effects gerava acoplamento com tokens legados de DI RxJS (`StateObservable`, `ActionsSubject`) incompatíveis com o bootstrap nativo sem `TestBed`. O `signalStore` é 100% nativo em signals do Angular 22, tem zero boilerplate, opera perfeitamente com os testes e componentes e atende com excelência ao escopo (apenas UI e Session, sem entidades).
+  - `provideNativeHttpClient` (`@ng-native/platform/http`): configura o `HttpClient` do Angular com o backend `withXhr()` nativo do React Native, garantindo streaming de respostas e suporte a upload/download no Android. Interceptor de cabeçalhos (`X-Device-Id`) validado com sucesso.
+
+- **Spike 1.4 (d) - Database, migrations e reatividade:**
+  - Migrations e `Database`: O módulo `@ng-native/expo` fornece a abstração `Database` e `Migration` baseada nativamente em `PRAGMA user_version`. As migrations rodam em transações isoladas com commit/rollback atômico e atualização versionada no banco SQLite.
+  - Compatibilidade: `expo-sqlite@~57.0.0` (57.0.3) integra perfeitamente com `@ng-native/expo@0.3.0`.
+  - Reatividade por Signals: Repositórios expõem listagens através de signals somente-leitura (`asReadonly()`, `computed`). A invalidação explícita após mutações locais atualiza a árvore de componentes reativamente sem necessidade de ORMs pesados.
+  - Listener Externo: `addDatabaseChangeListener` de `expo-sqlite` está disponível (habilitado com `enableChangeListener: true` na abertura). Quando escritas externas ou em background ocorrem, a tabela afetada é identificada e o repositório é invalidado e atualizado automaticamente na interface.
+
+- **Spike 1.5 (e) - Shell Web, Islands, Service Worker e IndexedDB:**
+  - Islands (`@ng-native/web`): O elemento `<ng-native-island [component]="MyComponent">` atua como fronteira controlada entre a aplicação web (Angular Router web + DOM) e os componentes desenvolvidos com o renderer nativo, mantendo estado, inputs/outputs tipados e injeção de dependência compartilhada.
+  - Banco Web: Adotado wrapper Promise sobre a API padrão `IndexedDB` (sem sobrecarga de bibliotecas pesadas), validado pela mesma suíte de contrato do port `Repository` (com soft-delete via `deleted_at`).
+  - PWA: Suporte offline e precache de assets do shell configurado via `@angular/service-worker` (`provideServiceWorker` em produção e `ngsw-config.json`).
+
+- **Spike 1.6 (f) - Emulador e Maestro com KVM (Plano B registrado):**
+  - Diagnóstico local: `/dev/kvm` não está exposto no container Docker no ambiente Windows/WSL2 local da máquina de desenvolvimento.
+  - Plano B (padrão adotado no ecossistema GreenKeeper):
+    1. Testes unitários e de integração de componentes rodam com 100% de fidelidade via `@ng-native/testing` (fake Fabric + Vitest) dentro do container `node`.
+    2. O build do APK release/debug roda 100% dentro do container `build` (`Dockerfile.build`).
+    3. Para testes E2E com emulador Android via Maestro: o serviço `e2e` no `docker-compose.yml` conta com pré-checagem de KVM (`[ -e /dev/kvm ]`). Se indisponível no host local, emite aviso explicativo e não trava o pipeline local. A execução completa do emulador headless no container Docker é direcionada para runners Linux dedicados na esteira de CI/CD (com virtualização KVM nativa) ou via ADB conectado a dispositivo físico/emulador no host.
+
+- Tailwind 3 (preset) ou 4 (`native.css`).
 - Valores finais dos tokens dark (derivados; aprovação visual do usuário).
-- Imagem de emulador Docker: pronta ou montada sobre `sdkmanager` (spike f).
